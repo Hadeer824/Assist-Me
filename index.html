@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>تطبيق ساعدني - للوصول الشامل والتواصل بلغة الإشارة</title>
+    <meta name="description" content="تطبيق ذكي مدعوم بالذكاء الاصطناعي لتسهيل الاستخدام لذوي الهمم.">
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Changa:wght@400;600;800&display=swap" rel="stylesheet">
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <!-- Splash Screen -->
+    <div id="splashScreen" class="splash-screen">
+    </div>
+
+    <!-- App Header -->
+    <header>
+        <h1><i class="fa-solid fa-hands-holding-circle"></i> ساعدني</h1>
+        <button id="themeToggle" aria-label="تبديل الوضع الليلي" class="icon-btn" title="تبديل الوضع الليلي">
+            <i class="fa-solid fa-moon"></i>
+        </button>
+    </header>
+
+    <main class="container">
+        <!-- 1. Speech to Text -->
+        <section class="card" aria-labelledby="stt-heading">
+            <h2 id="stt-heading"><i class="fa-solid fa-microphone"></i> تحويل الصوت إلى نص</h2>
+            <div class="controls">
+                <button id="startRecordBtn" class="primary-btn" aria-label="بدء التسجيل الصوتي"><i class="fa-solid fa-play"></i> بدء التسجيل</button>
+                <button id="stopRecordBtn" class="danger-btn" disabled aria-label="إيقاف التسجيل الصوتي"><i class="fa-solid fa-stop"></i> إيقاف</button>
+            </div>
+            <p id="sttOutput" class="output-box" aria-live="polite">سيظهر النص المسموع هنا...</p>
+        </section>
+
+        <!-- 2. Text to Speech -->
+        <section class="card" aria-labelledby="tts-heading">
+            <h2 id="tts-heading"><i class="fa-solid fa-volume-high"></i> تحويل النص إلى صوت</h2>
+            <textarea id="ttsInput" placeholder="أدخل النص لتحويله إلى صوت..." aria-label="مدخل تحويل النص إلى صوت" rows="3"></textarea>
+            <button id="speakBtn" class="primary-btn" aria-label="قراءة النص"><i class="fa-solid fa-bullhorn"></i> تحدث</button>
+        </section>
+
+        <!-- 3. Image/Object Recognition -->
+        <section class="card vision-card" aria-labelledby="vision-heading">
+            <h2 id="vision-heading"><i class="fa-solid fa-eye"></i> التعرف على الصور بالذكاء الاصطناعي</h2>
+
+            <!-- API Key Setup -->
+            <div id="apiKeySetup" class="api-key-setup">
+                <div class="api-key-header">
+                    <i class="fa-solid fa-key"></i>
+                    <span>أدخل Gemini API Key لتفعيل التحليل الحقيقي</span>
+                </div>
+                <div class="api-key-row">
+                    <input type="password" id="geminiApiKey" placeholder="AIza..." aria-label="مفتاح Gemini API">
+                    <button id="saveApiKeyBtn" class="primary-btn" aria-label="حفظ المفتاح">
+                        <i class="fa-solid fa-check"></i> حفظ
+                    </button>
+                </div>
+                <p class="api-key-hint">
+                    <i class="fa-solid fa-circle-info"></i>
+                    احصل على مفتاح مجاني من 
+                    <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener">Google AI Studio</a>
+                </p>
+            </div>
+
+            <!-- Mode Tabs -->
+            <div class="vision-tabs">
+                <button class="vision-tab active" id="vtab-upload" data-panel="vpanel-upload" aria-selected="true">
+                    <i class="fa-solid fa-upload"></i> رفع صورة
+                </button>
+                <button class="vision-tab" id="vtab-camera" data-panel="vpanel-camera" aria-selected="false">
+                    <i class="fa-solid fa-camera"></i> التقاط بالكاميرا
+                </button>
+            </div>
+
+            <!-- Panel: File Upload -->
+            <div class="vision-panel" id="vpanel-upload">
+                <div class="file-drop-zone" id="fileDropZone">
+                    <input type="file" id="imageUpload" accept="image/*" aria-label="رفع صورة للتعرف عليها">
+                    <i class="fa-solid fa-cloud-arrow-up drop-icon"></i>
+                    <p>اسحب وأفلت الصورة هنا، أو</p>
+                    <label for="imageUpload" class="primary-btn" style="margin-top:8px">
+                        <i class="fa-solid fa-image"></i> اختر صورة
+                    </label>
+                </div>
+            </div>
+
+            <!-- Panel: Live Camera -->
+            <div class="vision-panel hidden" id="vpanel-camera">
+                <div class="vision-cam-container" id="visionCamContainer">
+                    <video id="visionVideo" class="vision-video" autoplay playsinline muted></video>
+                    <canvas id="visionCanvas" class="vision-canvas-hidden"></canvas>
+                    <div id="visionCamOverlay" class="vision-cam-overlay">
+                        <i class="fa-solid fa-camera" style="font-size:2.5rem;opacity:0.5"></i>
+                        <p>اضغط لتشغيل الكاميرا</p>
+                    </div>
+                </div>
+                <div class="vision-cam-controls">
+                    <button id="startVisionCam" class="primary-btn">
+                        <i class="fa-solid fa-video"></i> تشغيل الكاميرا
+                    </button>
+                    <button id="stopVisionCam" class="danger-btn hidden">
+                        <i class="fa-solid fa-video-slash"></i> إيقاف
+                    </button>
+                    <button id="captureVisionBtn" class="secondary-btn hidden" aria-label="التقاط وتحليل">
+                        <i class="fa-solid fa-circle"></i> التقاط وتحليل
+                    </button>
+                </div>
+            </div>
+
+            <!-- Preview & Analysis -->
+            <div id="imagePreviewContainer" class="hidden">
+                <div class="vision-preview-row">
+                    <img id="imagePreview" src="" alt="معاينة الصورة" class="preview-img">
+                    <button id="reAnalyzeBtn" class="secondary-btn vision-reanalyze-btn" aria-label="إعادة التحليل">
+                        <i class="fa-solid fa-rotate"></i> إعادة تحليل
+                    </button>
+                </div>
+            </div>
+
+            <!-- Analysis Progress -->
+            <div id="visionProgress" class="vision-progress hidden">
+                <div class="vision-progress-bar"><div id="visionProgressFill" class="vision-progress-fill"></div></div>
+                <p id="visionProgressLabel">جاري تحليل الصورة...</p>
+            </div>
+
+            <!-- Results -->
+            <div id="visionResults" class="vision-results hidden" aria-live="polite">
+
+                <!-- Main Description -->
+                <div class="vision-result-main">
+                    <div class="vr-icon"><i class="fa-solid fa-comments"></i></div>
+                    <div>
+                        <p class="vr-label">الوصف العام</p>
+                        <p id="vrDescription" class="vr-text"></p>
+                    </div>
+                </div>
+
+                <!-- Tags Row -->
+                <div class="vr-tags-row">
+                    <p class="vr-label"><i class="fa-solid fa-tags"></i> العناصر المكتشفة</p>
+                    <div id="vrTags" class="vr-tags"></div>
+                </div>
+
+                <!-- Details Grid -->
+                <div class="vr-details-grid">
+                    <div class="vr-detail-card" id="vrColorCard">
+                        <i class="fa-solid fa-palette"></i>
+                        <span class="vr-detail-label">الألوان</span>
+                        <span id="vrColors" class="vr-detail-val"></span>
+                    </div>
+                    <div class="vr-detail-card" id="vrMoodCard">
+                        <i class="fa-solid fa-face-smile"></i>
+                        <span class="vr-detail-label">الأجواء</span>
+                        <span id="vrMood" class="vr-detail-val"></span>
+                    </div>
+                    <div class="vr-detail-card" id="vrTextCard">
+                        <i class="fa-solid fa-font"></i>
+                        <span class="vr-detail-label">نص موجود</span>
+                        <span id="vrText" class="vr-detail-val"></span>
+                    </div>
+                    <div class="vr-detail-card" id="vrConfCard">
+                        <i class="fa-solid fa-chart-bar"></i>
+                        <span class="vr-detail-label">دقة التحليل</span>
+                        <span id="vrConfidence" class="vr-detail-val"></span>
+                    </div>
+                </div>
+
+                <!-- Accessibility Description -->
+                <div class="vr-a11y">
+                    <i class="fa-solid fa-universal-access"></i>
+                    <div>
+                        <p class="vr-label">وصف لذوي الهمم (النص البديل)</p>
+                        <p id="vrA11y" class="vr-text"></p>
+                    </div>
+                    <button id="speakResultBtn" class="primary-btn vision-speak-btn" aria-label="استمع للنتائج">
+                        <i class="fa-solid fa-volume-high"></i>
+                    </button>
+                </div>
+
+            </div>
+
+        </section>
+
+        <!-- 4. Navigation -->
+        <section class="card" aria-labelledby="nav-heading">
+            <h2 id="nav-heading"><i class="fa-solid fa-compass"></i> المساعد الملاحي</h2>
+            <div id="map" class="map-container" aria-label="خريطة تفاعلية" role="application"></div>
+            <input type="text" id="destinationInput" placeholder="إلى أين تريد الذهاب؟" aria-label="مدخل الوجهة">
+            <button id="navigateBtn" class="primary-btn" aria-label="البحث عن مسار آمن"><i class="fa-solid fa-route"></i> البحث عن مسار آمن</button>
+            <p id="navOutput" class="output-box hidden" aria-live="polite"></p>
+        </section>
+
+        <!-- 5. Sign Language -->
+        <section class="card sign-lang-card" aria-labelledby="sign-heading">
+            <h2 id="sign-heading"><i class="fa-solid fa-hands"></i> لغة الإشارة العربية</h2>
+            
+            <!-- Tabs -->
+            <div class="sign-tabs" role="tablist" aria-label="تبويبات لغة الإشارة">
+                <button class="sign-tab active" id="tab-text2sign" role="tab" aria-selected="true" aria-controls="panel-text2sign">
+                    <i class="fa-solid fa-hand-point-right"></i> نص إلى إشارة
+                </button>
+                <button class="sign-tab" id="tab-camera" role="tab" aria-selected="false" aria-controls="panel-camera">
+                    <i class="fa-solid fa-camera"></i> كاميرا التعرف
+                </button>
+                <button class="sign-tab" id="tab-library" role="tab" aria-selected="false" aria-controls="panel-library">
+                    <i class="fa-solid fa-book-open"></i> مكتبة الإشارات
+                </button>
+            </div>
+
+            <!-- Panel 1: Text to Sign -->
+            <div class="sign-panel" id="panel-text2sign" role="tabpanel" aria-labelledby="tab-text2sign">
+                <p class="sign-hint">اكتب كلمة أو جملة وسيتم عرض إشارتها بالصور التوضيحية</p>
+                <div class="sign-input-row">
+                    <input type="text" id="signTextInput" placeholder="اكتب كلمة مثل: مرحبا، شكرا، مساعدة..." aria-label="النص للترجمة إلى لغة الإشارة">
+                    <button id="translateSignBtn" class="primary-btn" aria-label="ترجمة إلى لغة الإشارة">
+                        <i class="fa-solid fa-language"></i> ترجم
+                    </button>
+                </div>
+                <div id="signDisplayArea" class="sign-display" aria-live="polite" aria-label="عرض إشارات الكلمات">
+                    <div class="sign-placeholder">
+                        <i class="fa-solid fa-hands" style="font-size:3rem; opacity:0.3"></i>
+                        <p>ستظهر الإشارات هنا</p>
+                    </div>
+                </div>
+                <div id="signAnimArea" class="sign-anim-area hidden">
+                    <div class="sign-character" id="signCharacter">
+                        <div class="sign-avatar">
+                            <div class="avatar-body">
+                                <div class="avatar-head"></div>
+                                <div class="avatar-torso"></div>
+                                <div class="avatar-left-arm" id="leftArm"></div>
+                                <div class="avatar-right-arm" id="rightArm"></div>
+                            </div>
+                        </div>
+                        <p id="signWordLabel" class="sign-word-label"></p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Panel 2: Camera Recognition -->
+            <div class="sign-panel hidden" id="panel-camera" role="tabpanel" aria-labelledby="tab-camera">
+                <p class="sign-hint">استخدم الكاميرا لالتقاط إشارتك وسيتعرف التطبيق على ما تقوله</p>
+                <div class="camera-container">
+                    <video id="signVideo" class="sign-video" autoplay playsinline muted aria-label="بث الكاميرا للتعرف على لغة الإشارة"></video>
+                    <canvas id="signCanvas" class="sign-canvas"></canvas>
+                    <div id="cameraOverlay" class="camera-overlay">
+                        <i class="fa-solid fa-camera" style="font-size:3rem; opacity:0.5"></i>
+                        <p>اضغط لتشغيل الكاميرا</p>
+                    </div>
+                    <div class="hand-guide-frame"></div>
+                </div>
+                <div class="camera-controls">
+                    <button id="startCameraBtn" class="primary-btn" aria-label="تشغيل الكاميرا">
+                        <i class="fa-solid fa-video"></i> تشغيل الكاميرا
+                    </button>
+                    <button id="stopCameraBtn" class="danger-btn hidden" aria-label="إيقاف الكاميرا">
+                        <i class="fa-solid fa-video-slash"></i> إيقاف
+                    </button>
+                    <button id="captureSignBtn" class="secondary-btn hidden" aria-label="التقاط الإشارة">
+                        <i class="fa-solid fa-circle"></i> التقاط
+                    </button>
+                </div>
+                <div id="cameraSignResult" class="sign-result-box hidden" aria-live="polite">
+                    <span class="result-emoji">🤟</span>
+                    <div>
+                        <p class="result-word"></p>
+                        <p class="result-confidence"></p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Panel 3: Sign Library -->
+            <div class="sign-panel hidden" id="panel-library" role="tabpanel" aria-labelledby="tab-library">
+                <p class="sign-hint">استعرض مكتبة الكلمات الشائعة بلغة الإشارة العربية</p>
+                <div class="library-search">
+                    <input type="text" id="librarySearch" placeholder="ابحث في المكتبة..." aria-label="البحث في مكتبة لغة الإشارة">
+                </div>
+                <div class="library-categories">
+                    <button class="cat-btn active" data-cat="all">الكل</button>
+                    <button class="cat-btn" data-cat="greetings">تحيات</button>
+                    <button class="cat-btn" data-cat="emergency">طوارئ</button>
+                    <button class="cat-btn" data-cat="daily">يومي</button>
+                    <button class="cat-btn" data-cat="feelings">مشاعر</button>
+                    <button class="cat-btn" data-cat="numbers">أرقام</button>
+                </div>
+                <div id="signLibraryGrid" class="sign-library-grid" aria-label="مكتبة إشارات الكلمات"></div>
+            </div>
+        </section>
+
+        <!-- 6. Chat Assistant -->
+        <section class="card chat-section" aria-labelledby="chat-heading" style="margin-top:0">
+            <h2 id="chat-heading"><i class="fa-solid fa-robot"></i> المساعد الذكي <span class="ai-badge"><i class="fa-solid fa-brain"></i> AI</span></h2>
+            <div id="chatWindow" class="chat-window" aria-live="polite" aria-relevant="additions">
+                <div class="chat-message bot">مرحباً! أنا المساعد الذكي المدعوم بالذكاء الاصطناعي. للتفعيل، أدخل مفتاح API في قسم التعرف على الصور أعلاه، أو اكتب أي كلمة للرد التقليدي.</div>
+            </div>
+            <div class="chat-input-area">
+                <input type="text" id="chatInput" placeholder="اكتب رسالة..." aria-label="مدخل المحادثة">
+                <button id="sendChatBtn" class="primary-btn icon-btn send-btn" aria-label="إرسال رسالة"><i class="fa-solid fa-paper-plane"></i></button>
+            </div>
+        </section>
+        
+        <!-- Loading Animation Overlay -->
+        <div id="loadingOverlay" class="loading-overlay hidden" aria-hidden="true">
+            <div class="spinner"></div>
+            <p>جاري المعالجة...</p>
+        </div>
+    </main>
+
+    <!-- Emergency SOS Floating Button -->
+    <button id="sosBtn" class="sos-btn" aria-label="زر الطوارئ" title="انقر لتفعيل وضع الطوارئ">
+        <i class="fa-solid fa-triangle-exclamation"></i> طوارئ (SOS)
+    </button>
+
+    <!-- Leaflet JS -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+    <!-- Custom Script -->
+    <script src="script.js"></script>
+</body>
+</html>
